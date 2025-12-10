@@ -1,21 +1,16 @@
-# Deployment Checklist
+# Frontend Integration & Development Checklist
 
-- [x] **Access VPS**
-    - [x] Locate PEM file <!-- id: 0 -->
-    - [x] Verify SSH connection <!-- id: 1 -->
-- [x] **Clean & Setup Environment**
-    - [x] Remove existing `rainflow-app` directory <!-- id: 2 -->
-    - [x] Install/Verify Docker & Docker Compose <!-- id: 3 -->
-    - [x] Install/Verify Node.js v20 <!-- id: 4 -->
-    - [x] Install PM2 <!-- id: 5 -->
-- [x] **Deploy Application**
-    - [x] Clone repository `https://github.com/amarwaro527-coder/rainflow-app` <!-- id: 6 -->
-    - [x] Install dependencies (`npm install`) <!-- id: 7 -->
-    - [x] Configure `.env` file <!-- id: 8 -->
-- [x] **Launch Services**
-    - [x] Start Docker containers (`redis`, `postgres`) <!-- id: 9 -->
-    - [x] Start Backend with PM2 <!-- id: 10 -->
-    - [x] Start Frontend with PM2 (or build & serve) <!-- id: 11 -->
-- [x] **Verification**
-    - [x] Check PM2 status <!-- id: 12 -->
-    - [x] Check Docker status <!-- id: 13 -->
+## Phase 1: Preparation & Analysis
+- [x] Analyze Backend API Endpoints (`src/routes`) <!-- id: 0 -->
+- [x] Setup Frontend Environment Variables (`.env`) <!-- id: 1 -->
+
+## Phase 2: Implementation
+- [/] Create API Service (`frontend/src/services/api.ts`) <!-- id: 2 -->
+- [/] Integrate Dashboard Stats (Active Jobs, Videos, etc.) <!-- id: 3 -->
+- [/] Implement "New Campaign" Action <!-- id: 4 -->
+- [ ] Implement Job Queue View <!-- id: 5 -->
+
+## Phase 3: Deployment
+- [ ] Push Changes to GitHub <!-- id: 6 -->
+- [ ] Deploy to VPS (Pull & Restart) <!-- id: 7 -->
+- [ ] Verify Functionality on VPS <!-- id: 8 -->

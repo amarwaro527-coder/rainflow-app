@@ -1,8 +1,24 @@
 import { useState } from 'react';
-import { Activity, Layers, Settings, Youtube, Zap } from 'lucide-react';
+import { Activity, Layers, Settings, Youtube, Zap, CheckCircle, AlertCircle } from 'lucide-react';
+import { jobService } from './services/api';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [isCreating, setIsCreating] = useState(false);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+
+  const handleCreateCampaign = async () => {
+    setIsCreating(true);
+    setNotification(null);
+    try {
+      const result = await jobService.createJob(60, 'rain noise'); // Default 60 mins
+      setNotification({ type: 'success', message: `Campaign Started! Job ID: ${result.jobId}` });
+    } catch (error: any) {
+      setNotification({ type: 'error', message: `Failed to start campaign: ${error.message}` });
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   return (
     <div className="flex h-screen w-screen bg-carbon-black text-white overflow-hidden">
@@ -64,11 +80,26 @@ function App() {
               <h2 className="text-3xl font-orbitron text-white">COMMAND CENTER</h2>
               <p className="text-gray-400 font-rajdhani">Welcome back, Commander.</p>
             </div>
-            <button className="rog-btn rog-btn-lambo flex items-center gap-2">
+            <button
+              onClick={handleCreateCampaign}
+              disabled={isCreating}
+              className={`rog-btn rog-btn-lambo flex items-center gap-2 ${isCreating ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
               <Zap size={18} />
-              <span>NEW CAMPAIGN</span>
+              <span>{isCreating ? 'STARTING...' : 'NEW CAMPAIGN'}</span>
             </button>
           </header>
+
+          {/* Notification Area */}
+          {notification && (
+            <div className={`mb-6 p-4 rounded border flex items-center gap-3 ${notification.type === 'success'
+                ? 'bg-green-900/20 border-green-500 text-green-400'
+                : 'bg-red-900/20 border-red-500 text-red-400'
+              }`}>
+              {notification.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+              <span className="font-rajdhani font-bold">{notification.message}</span>
+            </div>
+          )}
 
           {/* Content Placeholder */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -90,8 +121,8 @@ const SidebarItem = ({ icon, label, active, onClick }: any) => (
   <button
     onClick={onClick}
     className={`w-full flex items-center gap-3 px-4 py-3 rounded transition-all duration-300 font-rajdhani font-bold tracking-wide ${active
-        ? 'bg-rog-red/20 text-rog-red border-l-4 border-rog-red'
-        : 'text-gray-400 hover:bg-white/5 hover:text-white'
+      ? 'bg-rog-red/20 text-rog-red border-l-4 border-rog-red'
+      : 'text-gray-400 hover:bg-white/5 hover:text-white'
       }`}
   >
     {icon}
