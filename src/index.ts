@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import { config } from './config/env';
 
+import { setupWorkers } from './queue/workers';
+
 const app = express();
 
 // Middleware
@@ -21,7 +23,6 @@ app.get('/health', (req, res) => {
 const startServer = async () => {
     try {
         // Initialize Workers
-        const { setupWorkers } = await import('./queue/workers');
         setupWorkers();
 
         app.listen(config.port, () => {

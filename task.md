@@ -1,0 +1,21 @@
+# Deployment Checklist
+
+- [x] **Access VPS**
+    - [x] Locate PEM file <!-- id: 0 -->
+    - [x] Verify SSH connection <!-- id: 1 -->
+- [x] **Clean & Setup Environment**
+    - [x] Remove existing `rainflow-app` directory <!-- id: 2 -->
+    - [x] Install/Verify Docker & Docker Compose <!-- id: 3 -->
+    - [x] Install/Verify Node.js v20 <!-- id: 4 -->
+    - [x] Install PM2 <!-- id: 5 -->
+- [x] **Deploy Application**
+    - [x] Clone repository `https://github.com/amarwaro527-coder/rainflow-app` <!-- id: 6 -->
+    - [x] Install dependencies (`npm install`) <!-- id: 7 -->
+    - [x] Configure `.env` file <!-- id: 8 -->
+- [x] **Launch Services**
+    - [x] Start Docker containers (`redis`, `postgres`) <!-- id: 9 -->
+    - [x] Start Backend with PM2 <!-- id: 10 -->
+    - [x] Start Frontend with PM2 (or build & serve) <!-- id: 11 -->
+- [x] **Verification**
+    - [x] Check PM2 status <!-- id: 12 -->
+    - [x] Check Docker status <!-- id: 13 -->
