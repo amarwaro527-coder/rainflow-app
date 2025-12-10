@@ -47,7 +47,7 @@ export class AudioGenerator {
         console.log(`[Generator] Triggering render on page...`);
 
         // Evaluate the render function in the browser context
-        const base64Data = await page.evaluate(async (d, s, c, assets) => {
+        const base64Data = await page.evaluate(async (d: number, s: string, c: string, assets: any) => {
             // @ts-ignore
             return await window.engine.render(d, s, c, assets);
         }, duration, seed, category, audioData);
