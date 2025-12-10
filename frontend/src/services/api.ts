@@ -35,5 +35,11 @@ export const jobService = {
     getHealth: async () => {
         const response = await api.get('/health');
         return response.data;
+    },
+
+    // Get all jobs
+    getJobs: async () => {
+        const response = await api.get('/api/jobs');
+        return response.data;
     }
 };

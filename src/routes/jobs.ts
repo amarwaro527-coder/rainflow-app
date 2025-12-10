@@ -22,5 +22,18 @@ router.post('/', async (req, res) => {
         res.status(500).json({ status: 'error', message: error.message });
     }
 });
+    } catch (error: any) {
+    res.status(500).json({ status: 'error', message: error.message });
+}
+});
+
+router.get('/', async (req, res) => {
+    try {
+        const jobs = await audioQueue.getJobs(['active', 'waiting', 'completed', 'failed']);
+        res.json(jobs);
+    } catch (error: any) {
+        res.status(500).json({ status: 'error', message: error.message });
+    }
+});
 
 export default router;

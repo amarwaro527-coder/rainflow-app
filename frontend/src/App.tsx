@@ -1,11 +1,28 @@
-import { useState } from 'react';
-import { Activity, Layers, Settings, Youtube, Zap, CheckCircle, AlertCircle } from 'lucide-react';
-import { jobService } from './services/api';
+import { useState, useEffect } from 'react';
+import { Activity, Layers, Settings, Youtube, Zap, CheckCircle, AlertCircle, Clock, Loader } from 'lucide-react';
+import { jobService, type Job } from './services/api';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isCreating, setIsCreating] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+  const [jobs, setJobs] = useState<Job[]>([]);
+
+  // Fetch jobs on load and when tab changes
+  useEffect(() => {
+    fetchJobs();
+    const interval = setInterval(fetchJobs, 5000); // Poll every 5s
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchJobs = async () => {
+    try {
+      const data = await jobService.getJobs();
+      setJobs(data);
+    } catch (error) {
+      console.error('Failed to fetch jobs', error);
+    }
+  };
 
   const handleCreateCampaign = async () => {
     setIsCreating(true);
@@ -13,12 +30,18 @@ function App() {
     try {
       const result = await jobService.createJob(60, 'rain noise'); // Default 60 mins
       setNotification({ type: 'success', message: `Campaign Started! Job ID: ${result.jobId}` });
+      fetchJobs(); // Refresh list
     } catch (error: any) {
       setNotification({ type: 'error', message: `Failed to start campaign: ${error.message}` });
     } finally {
       setIsCreating(false);
     }
   };
+
+  // Calculate Stats
+  const activeJobsCount = jobs.filter(j => j.status === 'active' || j.status === 'waiting').length;
+  const completedJobsCount = jobs.filter(j => j.status === 'completed').length;
+  const failedJobsCount = jobs.filter(j => j.status === 'failed').length;
 
   return (
     <div className="flex h-screen w-screen bg-carbon-black text-white overflow-hidden">
@@ -93,24 +116,55 @@ function App() {
           {/* Notification Area */}
           {notification && (
             <div className={`mb-6 p-4 rounded border flex items-center gap-3 ${notification.type === 'success'
-                ? 'bg-green-900/20 border-green-500 text-green-400'
-                : 'bg-red-900/20 border-red-500 text-red-400'
+              ? 'bg-green-900/20 border-green-500 text-green-400'
+              : 'bg-red-900/20 border-red-500 text-red-400'
               }`}>
               {notification.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
               <span className="font-rajdhani font-bold">{notification.message}</span>
             </div>
           )}
 
-          {/* Content Placeholder */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <StatCard label="Active Jobs" value="3" color="text-neon-blue" />
-            <StatCard label="Quota Used" value="4,500 / 10,000" color="text-lambo-yellow" />
-            <StatCard label="Videos Published" value="128" color="text-rog-red" />
-          </div>
+          {/* Dashboard View */}
+          {activeTab === 'dashboard' && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <StatCard label="Active Jobs" value={activeJobsCount.toString()} color="text-neon-blue" />
+              <StatCard label="Completed" value={completedJobsCount.toString()} color="text-lambo-yellow" />
+              <StatCard label="Failed" value={failedJobsCount.toString()} color="text-rog-red" />
+            </div>
+          )}
 
-          <div className="mt-8 rog-panel h-96 flex items-center justify-center border-dashed border-gray-700">
-            <p className="text-gray-500 font-rajdhani text-xl">MODULE: {activeTab.toUpperCase()}</p>
-          </div>
+          {/* Queue View */}
+          {activeTab === 'queue' && (
+            <div className="space-y-4">
+              <h3 className="text-xl font-orbitron text-white mb-4">JOB QUEUE</h3>
+              {jobs.length === 0 ? (
+                <p className="text-gray-500 font-rajdhani">No jobs in queue.</p>
+              ) : (
+                jobs.map((job) => (
+                  <div key={job.id} className="rog-panel p-4 flex justify-between items-center border border-gray-800">
+                    <div>
+                      <p className="font-bold text-white">Job #{job.id}</p>
+                      <p className="text-xs text-gray-400">{job.data.category} - {job.data.duration} mins</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {job.status === 'active' && <Loader className="animate-spin text-neon-blue" size={16} />}
+                      {job.status === 'completed' && <CheckCircle className="text-green-500" size={16} />}
+                      {job.status === 'waiting' && <Clock className="text-yellow-500" size={16} />}
+                      {job.status === 'failed' && <AlertCircle className="text-red-500" size={16} />}
+                      <span className="uppercase text-sm font-rajdhani">{job.status}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {/* Other Views Placeholder */}
+          {(activeTab === 'uploads' || activeTab === 'config') && (
+            <div className="mt-8 rog-panel h-96 flex items-center justify-center border-dashed border-gray-700">
+              <p className="text-gray-500 font-rajdhani text-xl">MODULE: {activeTab.toUpperCase()} (Coming Soon)</p>
+            </div>
+          )}
         </div>
       </main>
     </div>
