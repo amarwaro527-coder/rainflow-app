@@ -22,10 +22,7 @@ router.post('/', async (req, res) => {
         res.status(500).json({ status: 'error', message: error.message });
     }
 });
-    } catch (error: any) {
-    res.status(500).json({ status: 'error', message: error.message });
-}
-});
+
 
 router.get('/', async (req, res) => {
     try {
