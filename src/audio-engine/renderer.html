@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Rainflow Headless Renderer</title>
+</head>
+
+<body>
+    <h1>Rainflow Audio Engine (Headless)</h1>
+    <div id="status">Ready</div>
+
+    <script>
+        class HeadlessAudioEngine {
+            constructor() {
+                this.sSYNCHRO = "0123456789";
+                this.iNUMBERBANDS = 10;
+                this.stretch = Array(10).fill(1.25);
+            }
+
+            async render(duration, seed, category, audioData) {
+                console.log(`[Renderer] Starting render: ${duration}s, Seed: ${seed}`);
+                document.getElementById('status').innerText = 'Rendering...';
+
+                const sampleRate = 44100;
+                const offlineCtx = new OfflineAudioContext(2, sampleRate * duration, sampleRate);
+
+                // Decode all audio data
+                const bufferList = []; // 0..9 = A, 10..19 = B
+
+                // Helper to decode base64
+                const decode = async (base64) => {
+                    const binaryString = window.atob(base64);
+                    const len = binaryString.length;
+                    const bytes = new Uint8Array(len);
+                    for (let i = 0; i < len; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    return await offlineCtx.decodeAudioData(bytes.buffer);
+                };
+
+                console.log('[Renderer] Decoding audio assets...');
+                // We need to fill bufferList indices 0-19
+                // 0-9: A stems, 10-19: B stems
+                for (let i = 0; i < this.iNUMBERBANDS; i++) {
+                    // Load A
+                    if (audioData && audioData[`${i}a`]) {
+                        bufferList[i] = await decode(audioData[`${i}a`]);
+                    } else {
+                        // Create silent buffer if missing
+                        bufferList[i] = offlineCtx.createBuffer(2, sampleRate, sampleRate);
+                    }
+
+                    // Load B
+                    if (audioData && audioData[`${i}b`]) {
+                        bufferList[i + this.iNUMBERBANDS] = await decode(audioData[`${i}b`]);
+                    } else {
+                        bufferList[i + this.iNUMBERBANDS] = offlineCtx.createBuffer(2, sampleRate, sampleRate);
+                    }
+                }
+
+                // Determine slider values from seed
+                const rng = this.seededRandom(seed);
+                const gains = [];
+                for (let i = 0; i < this.iNUMBERBANDS; i++) {
+                    gains[i] = rng();
+                }
+
+                // Build Graph
+                const masterGain = offlineCtx.createGain();
+                masterGain.connect(offlineCtx.destination);
+                masterGain.gain.value = 0.5;
+
+                for (let i = 0; i < this.iNUMBERBANDS; i++) {
+                    if (gains[i] > 0.01) {
+                        const stemGain = offlineCtx.createGain();
+                        stemGain.connect(masterGain);
+                        stemGain.gain.value = gains[i];
+
+                        this.scheduleOfflineStem(offlineCtx, stemGain, i, duration, bufferList);
+                    }
+                }
+
+                console.log('[Renderer] Rendering...');
+                const renderedBuffer = await offlineCtx.startRendering();
+
+                console.log('[Renderer] Encoding to WAV...');
+                const wavData = this.bufferToWav(renderedBuffer);
+
+                return this.blobToBase64(new Blob([wavData], { type: 'audio/wav' }));
+            }
+
+            scheduleOfflineStem(ctx, gainNode, i, totalDuration, bufferList) {
+                let currentTime = 0;
+                const bufferA = bufferList[i];
+                const bufferB = bufferList[i + this.iNUMBERBANDS];
+
+                // Initial A
+                let srcA = ctx.createBufferSource();
+                srcA.buffer = bufferA;
+                srcA.connect(gainNode);
+                srcA.start(currentTime);
+
+                // Initial B logic
+                const j = parseInt(this.sSYNCHRO.charAt(i));
+                const durationA = bufferList[j].duration;
+                let nextB = currentTime + (Math.round(durationA * 10) / 20) * this.stretch[j];
+
+                let srcB = ctx.createBufferSource();
+                srcB.buffer = bufferB;
+                srcB.connect(gainNode);
+                srcB.start(nextB);
+
+                // Loop logic
+                const durA = Math.round(bufferA.duration * 8) / 8;
+                const durB = Math.round(bufferB.duration * 8) / 8;
+                const interval = (durA + durB) / 2 * this.stretch[i];
+
+                let nextA = currentTime + interval;
+                nextB += interval;
+
+                while (nextA < totalDuration) {
+                    srcA = ctx.createBufferSource();
+                    srcA.buffer = bufferA;
+                    srcA.connect(gainNode);
+                    srcA.start(nextA);
+                    nextA += interval;
+                }
+
+                while (nextB < totalDuration) {
+                    srcB = ctx.createBufferSource();
+                    srcB.buffer = bufferB;
+                    srcB.connect(gainNode);
+                    srcB.start(nextB);
+                    nextB += interval;
+                }
+            }
+
+            seededRandom(seed) {
+                let h = 0xdeadbeef;
+                for (let i = 0; i < seed.length; i++)
+                    h = Math.imul(h ^ seed.charCodeAt(i), 2654435761);
+                return function () {
+                    h = Math.imul(h ^ (h >>> 16), 2246822507);
+                    h = Math.imul(h ^ (h >>> 13), 3266489909);
+                    return (h >>> 0) / 4294967296;
+                }
+            }
+
+            bufferToWav(buffer) {
+                const numOfChan = buffer.numberOfChannels;
+                const length = buffer.length * numOfChan * 2 + 44;
+                const bufferArr = new ArrayBuffer(length);
+                const view = new DataView(bufferArr);
+                const channels = [];
+                let i;
+                let sample;
+                let pos = 0;
+
+                function setUint16(data) {
+                    view.setUint16(pos, data, true);
+                    pos += 2;
+                }
+
+                function setUint32(data) {
+                    view.setUint32(pos, data, true);
+                    pos += 4;
+                }
+
+                setUint32(0x46464952); // "RIFF"
+                setUint32(length - 8); // file length - 8
+                setUint32(0x45564157); // "WAVE"
+
+                setUint32(0x20746d66); // "fmt " chunk
+                setUint32(16); // length = 16
+                setUint16(1); // PCM (uncompressed)
+                setUint16(numOfChan);
+                setUint32(buffer.sampleRate);
+                setUint32(buffer.sampleRate * 2 * numOfChan); // avg. bytes/sec
+                setUint16(numOfChan * 2); // block-align
+                setUint16(16); // 16-bit
+
+                setUint32(0x61746164); // "data" - chunk
+                setUint32(length - pos - 4); // chunk length
+
+                for (i = 0; i < buffer.numberOfChannels; i++)
+                    channels.push(buffer.getChannelData(i));
+
+                let sampleIdx = 0;
+                while (sampleIdx < buffer.length) {
+                    for (i = 0; i < numOfChan; i++) {
+                        sample = Math.max(-1, Math.min(1, channels[i][sampleIdx]));
+                        sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
+                        view.setInt16(pos, sample, true);
+                        pos += 2;
+                    }
+                    sampleIdx++;
+                }
+
+                return bufferArr;
+            }
+
+            blobToBase64(blob) {
+                return new Promise((resolve, _) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.readAsDataURL(blob);
+                });
+            }
+        }
+
+        window.engine = new HeadlessAudioEngine();
+    </script>
+</body>
+
+</html>
