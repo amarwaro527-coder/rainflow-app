@@ -66,3 +66,22 @@ npm run build
 pm2 restart rainflow-backend
 ```
 Ini akan menyelesaikan masalah backend yang mati.
+
+## 6. Solusi Error "Git Push Rejected" (Sesuai Screenshot)
+Jika saat Anda melakukan `git push origin main` muncul error merah:
+`! [rejected] main -> main (fetch first)`
+
+**Penyebab:**
+Ada perubahan di GitHub (remote) yang belum ada di komputer lokal Anda. Ini wajar karena kita tadi melakukan perubahan di VPS.
+
+**Solusi:**
+Jalankan perintah ini di terminal VS Code Anda:
+
+```bash
+# 1. Ambil perubahan dari GitHub dulu
+git pull origin main --rebase
+
+# 2. Upload ulang
+git push origin main
+```
+Setelah itu, baru kembali ke langkah nomor 5 (masuk ke VPS dan `git pull`).
